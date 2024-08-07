@@ -1,0 +1,52 @@
+{
+  "name": "kick-vod-downloader",
+  "version": "0.9.0",
+  "description": "It's obvious in repository name",
+  "main": "./src/index.mjs",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --ignore app/ --exec npx electron . dev",
+    "prod": "next build && electron .",
+    "build": "next build",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CrawLeyYou/kick-vod-downloader.git"
+  },
+  "author": "CrawLeyYou",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CrawLeyYou/kick-vod-downloader/issues"
+  },
+  "homepage": "https://github.com/CrawLeyYou/kick-vod-downloader#readme",
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@radix-ui/react-alert-dialog": "^1.1.1",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-select": "^2.1.1",
+    "@radix-ui/react-slot": "^1.1.0",
+    "axios": "^1.7.3",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "express": "^4.19.2",
+    "lucide-react": "^0.424.0",
+    "m3u8-parser": "^7.1.0",
+    "next": "14.2.5",
+    "next-themes": "^0.3.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hook-form": "^7.52.2",
+    "sonner": "^1.5.0",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "electron": "^31.3.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1"
+  }
+}
