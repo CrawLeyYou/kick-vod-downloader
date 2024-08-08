@@ -45,6 +45,7 @@ const createFolderSelectDialog = async () => new Promise(async (resolve, reject)
 
 const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) => {
     dialog.showOpenDialog(null, {
+        title: "Select FFMPEG Executable",
         properties: ['openFile'],
         filters: [
             { name: 'Windows Executables', extensions: ['exe'] }

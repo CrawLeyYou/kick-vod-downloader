@@ -1,5 +1,7 @@
 'use client';
 import React from "react";
+import axios from "axios"
+import Image from "next/image"
 import {
   Card,
   CardContent,
@@ -10,8 +12,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import axios from "axios"
-
 import {
   Select,
   SelectContent,
@@ -20,10 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
 import { toast } from "sonner"
 import { Toaster } from "@/components/ui/sonner"
-
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -68,14 +66,16 @@ export default function Home() {
     axios.post("/api/download", {
       source: selectedVOD,
       resolution: selectedRes
-    }, []).then(() => {
-      toast("Downloading VOD", {
-        description: "with resolution " + selectedRes,
-        action: {
-          label: "Cancel",
-          onClick: () => cancelDownload(selectedVOD),
-        },
-      })
+    }, []).then((resp) => {
+      if (!resp.data.cancel) {
+        toast("Downloading VOD", {
+          description: "with resolution " + selectedRes,
+          action: {
+            label: "Cancel",
+            onClick: () => cancelDownload(selectedVOD),
+          },
+        })
+      }
     })
   }
 
@@ -131,7 +131,8 @@ export default function Home() {
         {vods.map((vod, i) => {
           return (
             <div key={i} className="m-auto w-[480px] border-gray-200 border-2 rounded">
-              <img className="rounded" src={vod.thumbnail.src} />
+              <span className="absolute text-white bg-zinc-950 bg-opacity-40">{new Date(vod.duration).toUTCString().match("..:..:..")[0]}</span>
+              <Image className="rounded" src={vod.thumbnail.src} alt="Thumbnail" width={1280} height={720} />
               <span className="m-2">{vod.session_title}</span>
               <br />
               <span className="m-2">{vod.start_time}</span>

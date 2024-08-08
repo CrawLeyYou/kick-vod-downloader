@@ -11,6 +11,7 @@ const nextApp = next({ dev: devMode })
 const getHandler = nextApp.getRequestHandler()
 
 let ffmpegPath
+let activeProcesses = []
 
 const app = express()
 var defaultPath = path.join(process.cwd());
@@ -32,11 +33,12 @@ nextApp.prepare().then(() => {
     app.get("/", (req, res) => {
         return nextApp.render(req, res, "/")
     })
-    
+
     app.post("/api/download", async (req, res) => {
         var parameters = req.body
         let source
         let savePath
+        let cancel = false
         var parser = new m3u8.Parser()
         await axios.get(parameters.source).then(async (data) => {
             await parser.push(data.data)
@@ -52,17 +54,27 @@ nextApp.prepare().then(() => {
         if (ffmpegPath === undefined) {
             await electron.createFFMPEGPathDialog().then((data) => {
                 if (!data.canceled) {
-                    ffmpegPath = data.filePaths[0]
+                    ffmpegPath = path.join(data.filePaths[0])
+                }
+                else {
+                    cancel = true
                 }
             })
         }
         await electron.createFolderSelectDialog().then((data) => {
             if (!data.canceled) {
-                savePath = data.filePath
+                savePath = path.join(data.filePath)
+            }
+            else {
+                cancel = true
             }
         })
+        if (!cancel) {
+            console.log(`${ffmpegPath} -i "${source}" -c copy ${savePath}`)
+        }
+        res.json({ cancel: cancel })
     })
-    
+
     app.post("/api/cancel", (req, res) => {
         console.log(req.body)
         res.send("ok")

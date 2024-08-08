@@ -1,13 +1,12 @@
 {
   "name": "kick-vod-downloader",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "It's obvious in repository name",
   "main": "./src/index.mjs",
   "private": true,
   "scripts": {
     "dev": "nodemon --ignore app/ --exec npx electron . dev",
     "prod": "next build && electron .",
-    "build": "next build",
     "lint": "next lint"
   },
   "repository": {
