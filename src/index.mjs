@@ -7,21 +7,35 @@ import m3u8 from "m3u8-parser"
 import axios from "axios"
 
 const devMode = (process.argv[2] === "dev") ? true : false
-const nextApp = next({ dev: devMode })
+const nextApp = next({ dev: devMode, dir: electron.app.getAppPath() })
 const getHandler = nextApp.getRequestHandler()
+const __dirname = import.meta.dirname
 
 let ffmpegPath
 let activeProcesses = []
+let canceled = []
 
 const app = express()
-var defaultPath = path.join(process.cwd());
 
 app.use(express.json());
 app.use(express.urlencoded({
     extended: true
 }));
 app.disable('x-powered-by');
-app.use(express.static(defaultPath + '/public'))
+app.use(express.static(__dirname + '/public'))
+
+const ffmpegCloseHandle = async (proc) => {
+    proc.on("exit", () => {
+        activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
+        var result = (proc.spawnargs.filter((data) => { if (canceled.includes(data)) return true }))
+        if (result[0] === undefined) {
+            electron.createSuccessNotif()
+        }
+        else {
+            canceled = canceled.filter((data) => data !== result[0])
+        }
+    })
+}
 
 nextApp.prepare().then(() => {
     app.listen(3000, async () => {
@@ -70,14 +84,26 @@ nextApp.prepare().then(() => {
             }
         })
         if (!cancel) {
-            console.log(`${ffmpegPath} -i "${source}" -c copy ${savePath}`)
+            let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
+            ffmpegCloseHandle(process)
+            activeProcesses.push({ source: source, proc: process })
         }
-        res.json({ cancel: cancel })
+        res.json({ cancel: cancel, source: source })
     })
 
     app.post("/api/cancel", (req, res) => {
-        console.log(req.body)
-        res.send("ok")
+        let killed = false
+        activeProcesses.map(async (data) => {
+            if (data.source === req.body.source) {
+                canceled.push(data.source)
+                data.proc.kill()
+                killed = true
+                res.json({ status: "killed" })
+            }
+        })
+        if (!killed) {
+            res.json({ status: "nochange", message: "there is no such a process" })
+        }
     })
 
     app.post("/api/resolution", async (req, res) => {
@@ -94,4 +120,6 @@ nextApp.prepare().then(() => {
     app.get('*', (req, res) => {
         return getHandler(req, res)
     })
+}).catch(async (err) => {
+    electron.createCriticalError("An error occurred while starting the NextApp.", err.message)
 })

@@ -72,7 +72,7 @@ export default function Home() {
           description: "with resolution " + selectedRes,
           action: {
             label: "Cancel",
-            onClick: () => cancelDownload(selectedVOD),
+            onClick: () => cancelDownload(resp.data.source),
           },
         })
       }
@@ -82,14 +82,16 @@ export default function Home() {
   const cancelDownload = async (source) => {
     axios.post("/api/cancel", {
       source: source
-    }, []).then(() => {
-      toast("Download Cancelled", {
-        description: "The download has been cancelled.",
-        action: {
-          label: "Close",
-          onClick: () => { },
-        },
-      })
+    }, []).then((response) => {
+      if (response.data.status !== "nochange") {
+        toast("Download Cancelled", {
+          description: "The download has been cancelled.",
+          action: {
+            label: "Close",
+            onClick: () => { },
+          },
+        })
+      }
     })
   }
   const cancelDialog = async () => dialogSetOpen(false)

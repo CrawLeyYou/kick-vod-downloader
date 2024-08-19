@@ -1,12 +1,13 @@
 {
   "name": "kick-vod-downloader",
   "version": "1.0.0",
-  "description": "It's obvious in repository name",
+  "description": "A tool to download VODs from Kick.",
   "main": "./src/index.mjs",
   "private": true,
   "scripts": {
     "dev": "nodemon --ignore app/ --exec npx electron . dev",
     "prod": "next build && electron .",
+    "dist": "next build && electron-builder",
     "lint": "next lint"
   },
   "repository": {
@@ -43,9 +44,31 @@
   },
   "devDependencies": {
     "electron": "^31.3.1",
+    "electron-builder": "^24.13.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
     "tailwindcss": "^3.4.1"
+  },
+  "build": {
+    "appId": "one.crawleyyou.kick-vod-downloader",
+    "productName": "Kick VOD Downloader",
+    "icon": "public/logo.png",
+    "win": {
+      "target": [
+        "portable",
+        "msi",
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false
+    }
   }
 }

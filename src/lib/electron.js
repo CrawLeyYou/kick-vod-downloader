@@ -1,11 +1,16 @@
 const {
     app,
     BrowserWindow,
-    dialog
+    dialog,
+    Notification
 } = require('electron')
 
 let win
 let devmode = (process.argv[2] === "dev") ? true : false
+
+if (process.platform === "win32") {
+    app.setAppUserModelId("Kick VOD Downloader");
+}
 
 const createWindow = async () => {
     win = new BrowserWindow({
@@ -55,11 +60,15 @@ const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) =
     })
 })
 
+const createSuccessNotif = async () => {
+    new Notification({ title: "Finished Downloading" }).show()
+}
 
 module.exports = {
     app,
     createWindow,
     createCriticalError,
     createFolderSelectDialog,
-    createFFMPEGPathDialog
+    createFFMPEGPathDialog,
+    createSuccessNotif
 }
