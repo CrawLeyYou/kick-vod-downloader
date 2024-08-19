@@ -9,7 +9,7 @@
 - bread 👍
 
 # Usage
-- Download [FFmpeg](https://www.ffmpeg.org/download.html#build-windows) & [latest build](github.com/CrawLeyYou/kick-vod-downloader/releases/latest)
+- Download [FFmpeg](https://www.ffmpeg.org/download.html#build-windows) & [latest build](https://github.com/CrawLeyYou/kick-vod-downloader/releases/latest)
 
 https://github.com/user-attachments/assets/3741c338-de7e-4c03-a2a1-227bc4745633
 
