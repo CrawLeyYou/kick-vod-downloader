@@ -15,9 +15,7 @@ jobs:
       with:
         node-version: 20.0.0
     - name: npm install
-      uses: actions/npm@master
-      with:
-        args: install
+      run: npm i
     - name: Build executables
       run: npm run dist
     - name: Upload to release
