@@ -7,6 +7,8 @@ jobs:
   build-and-release:
     name: build-and-release
     runs-on: windows-latest
+    permissions: 
+      contents: write
     steps:
     - name: Checkout repository
       uses: actions/checkout@master
@@ -18,9 +20,9 @@ jobs:
       run: npm i
     - name: Build executables
       run: npm run dist
-    - name: Upload to release
-      uses: JasonEtco/upload-to-release@master
+    - name: Release
+      uses: softprops/action-gh-release@v2
       with:
-          args: dist/*.exe || dist/*.msi
-      env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        files: |
+          dist/*.exe
+          dist/*.msi
