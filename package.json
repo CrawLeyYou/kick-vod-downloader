@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon --ignore app/ --exec npx electron . dev",
     "prod": "next build && electron .",
-    "dist": "next build && electron-builder",
+    "dist": "next build && electron-builder --publish=never",
     "lint": "next lint"
   },
   "repository": {
