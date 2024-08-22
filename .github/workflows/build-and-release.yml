@@ -23,7 +23,7 @@ jobs:
       with:
         args: run dist
     - name: Upload to release
-      uses: Shopify/upload-to-release@v1
+      uses: Shopify/upload-to-release@v2
       with:
           name: Kick VOD Downloader
           path: dist/*.exe || dist/*.msi
