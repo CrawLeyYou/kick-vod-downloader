@@ -23,6 +23,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ github.run_id }}
         files: |
           dist/*.exe
           dist/*.msi
