@@ -34,7 +34,7 @@ import {
 
 export default function Home() {
   const kickAPI = "https://kick.com/api/v1/"
-  const [username, setUsername] = React.useState("")
+  const [inputData, setInputData] = React.useState("")
   const [vods, setVODs] = React.useState([])
   const [open, dialogSetOpen] = React.useState(false);
   const [resolutions, setResolutions] = React.useState([])
@@ -43,8 +43,22 @@ export default function Home() {
 
   const fetchVODs = async () => {
     try {
-      let res = await axios.get(`${kickAPI}channels/${username}`)
-      setVODs(res.data.previous_livestreams)
+      if (inputData.match(/^https:\/\/kick.com\/video\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
+        let res = await axios.get(`${kickAPI}video/${inputData.split("https://kick.com/video/")[1]}`)
+        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: res.data.livestream.thumbnail }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
+      }
+      else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null){
+        let res = await axios.get(`${kickAPI}channels/${inputData}`)
+        setVODs(res.data.previous_livestreams)
+      }
+      else {
+        toast("Invalid input", {
+          description: "Please enter a valid username or VOD link.",
+          action: {
+            label: "Close"
+          },
+        })
+      }
     } catch (e) {
       console.log(e)
     }
@@ -106,7 +120,7 @@ export default function Home() {
   }
 
   const handleInputChange = (event) => {
-    setUsername(event.target.value);
+    setInputData(event.target.value);
   };
 
   return (
@@ -119,9 +133,9 @@ export default function Home() {
           <CardContent>
             <div className="grid w-full items-center gap-4">
               <div className="flex flex-col space-y-1.5">
-                <Label>Enter a streamer name</Label>
+                <Label>Enter a username / VOD link </Label>
               </div>
-              <Input type="username" value={username} placeholder="Username" onChange={handleInputChange} />
+              <Input type="username" value={inputData} placeholder="Username / VOD" onChange={handleInputChange} />
             </div>
           </CardContent>
           <CardFooter>

@@ -1,0 +1,30 @@
+name: build-and-release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build-and-release:
+    name: build-and-release
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@master
+    - name: Set up Node.js
+      uses: actions/setup-node@master
+      with:
+        node-version: 20.0.0
+    - name: npm install
+      uses: actions/npm@master
+      with:
+        args: install
+    - name: Build executables
+      uses: actions/npm@master
+      with:
+        args: run dist
+    - name: Upload to release
+      uses: Shopify/upload-to-release@v1
+      with:
+          name: Kick VOD Downloader
+          path: dist/*.exe || dist/*.msi
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
