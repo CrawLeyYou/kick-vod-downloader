@@ -5,13 +5,19 @@ import electron from "./lib/electron.js"
 import child_process from "node:child_process"
 import m3u8 from "m3u8-parser"
 import axios from "axios"
-import { EventEmitter } from "node:events"
+import {
+    EventEmitter
+} from "node:events"
 
 const devMode = (process.argv[2] === "dev") ? true : false
-const nextApp = next({ dev: devMode, dir: electron.app.getAppPath() })
+const nextApp = next({
+    dev: devMode,
+    dir: electron.app.getAppPath()
+})
 const getHandler = nextApp.getRequestHandler()
-const __dirname = import.meta.dirname
-const ffmpegUpdateEvent = new EventEmitter()
+const __dirname =
+    import.meta.dirname
+const ffmpegEvents = new EventEmitter()
 
 let ffmpegPath
 let activeProcesses = []
@@ -26,18 +32,19 @@ app.use(express.urlencoded({
 app.disable('x-powered-by');
 app.use(express.static(__dirname + '/public'))
 
-ffmpegUpdateEvent.on("increase", (data) => {
+ffmpegEvents.on("increase", (data) => {
     console.log(((data.progress / data.total) * 100).toFixed(2) + "%", `Segment: ${data.progress} / ${data.total} Remaining: ${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`)
 })
 
 const ffmpegCloseHandle = async (proc) => {
     proc.on("exit", () => {
         activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
-        var result = (proc.spawnargs.filter((data) => { if (canceled.includes(data)) return true }))
+        var result = (proc.spawnargs.filter((data) => {
+            if (canceled.includes(data)) return true
+        }))
         if (result[0] === undefined) {
             electron.createSuccessNotif()
-        }
-        else {
+        } else {
             canceled = canceled.filter((data) => data !== result[0])
         }
     })
@@ -55,9 +62,21 @@ const ffmpegProgressHandler = async (proc, playlist) => {
     let prevTime = Date.now()
     proc.stderr.on("data", (data) => {
         if ((data.toString()).match(currRegex) !== null) {
-           ffmpegUpdateEvent.emit("increase", { source: playlist, progress: i, total: parser.manifest.segments.length, prevTime: prevTime, currentTime: Date.now(), startTime: startTime })
-           prevTime = Date.now()
-           i++
+            ffmpegEvents.emit("increase", {
+                source: playlist,
+                progress: i,
+                total: parser.manifest.segments.length,
+                prevTime: prevTime,
+                currentTime: Date.now(),
+                startTime: startTime
+            })
+            prevTime = Date.now()
+            i++
+        } else if ((data.toString()).match(/.*frame=\s{0,}\d{1,}\sfps=.*/g)) {
+            ffmpegEvents.emit("details", {
+                source: playlist,
+                details: data.toString()
+            })
         }
     })
 }
@@ -88,14 +107,15 @@ nextApp.prepare().then(() => {
                 }
             })
         }).catch((err) => {
-            res.json({ error: err.message })
+            res.json({
+                error: err.message
+            })
         })
         if (ffmpegPath === undefined) {
             await electron.createFFMPEGPathDialog().then((data) => {
                 if (!data.canceled) {
                     ffmpegPath = path.join(data.filePaths[0])
-                }
-                else {
+                } else {
                     cancel = true
                 }
             })
@@ -103,8 +123,7 @@ nextApp.prepare().then(() => {
         await electron.createFolderSelectDialog().then((data) => {
             if (!data.canceled) {
                 savePath = path.join(data.filePath)
-            }
-            else {
+            } else {
                 cancel = true
             }
         })
@@ -112,9 +131,15 @@ nextApp.prepare().then(() => {
             let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
             ffmpegCloseHandle(process)
             ffmpegProgressHandler(process, source)
-            activeProcesses.push({ source: source, proc: process })
+            activeProcesses.push({
+                source: source,
+                proc: process
+            })
         }
-        res.json({ cancel: cancel, source: source })
+        res.json({
+            cancel: cancel,
+            source: source
+        })
     })
 
     app.post("/api/cancel", (req, res) => {
@@ -124,11 +149,16 @@ nextApp.prepare().then(() => {
                 canceled.push(data.source)
                 data.proc.kill()
                 killed = true
-                res.json({ status: "killed" })
+                res.json({
+                    status: "killed"
+                })
             }
         })
         if (!killed) {
-            res.json({ status: "nochange", message: "there is no such a process" })
+            res.json({
+                status: "nochange",
+                message: "there is no such a process"
+            })
         }
     })
 
@@ -138,9 +168,14 @@ nextApp.prepare().then(() => {
             parser.push(data.data)
             parser.end()
         }).catch((err) => {
-            res.json({ error: err.message })
+            res.json({
+                error: err.message
+            })
         })
-        res.json({ source: req.body?.source, resolutions: Object.keys(parser.manifest.mediaGroups.VIDEO) })
+        res.json({
+            source: req.body?.source,
+            resolutions: Object.keys(parser.manifest.mediaGroups.VIDEO)
+        })
     })
 
     app.get('*', (req, res) => {
