@@ -15,8 +15,7 @@ const nextApp = next({
     dir: electron.app.getAppPath()
 })
 const getHandler = nextApp.getRequestHandler()
-const __dirname =
-    import.meta.dirname
+const __dirname = import.meta.dirname
 const ffmpegEvents = new EventEmitter()
 
 let ffmpegPath
@@ -34,6 +33,16 @@ app.use(express.static(__dirname + '/public'))
 
 ffmpegEvents.on("increase", (data) => {
     console.log(((data.progress / data.total) * 100).toFixed(2) + "%", `Segment: ${data.progress} / ${data.total} Remaining: ${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`)
+})
+
+ffmpegEvents.on("details", (data) => {
+    let betterData = {
+        downloadedFrames: data.details.split("frame=")[1].split("fps")[0].replaceAll(" ", ""),
+        bitrate: data.details.split("bitrate=")[1].split("speed")[0].replaceAll(" ", ""),
+        fileSize: data.details.split("size=")[1].split("time")[0].replaceAll(" ", ""),
+        downloadedTotalTime: data.details.split("time=")[1].split("bitrate")[0].replaceAll(" ", "")
+    }
+    console.log(betterData)
 })
 
 const ffmpegCloseHandle = async (proc) => {
