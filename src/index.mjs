@@ -5,11 +5,13 @@ import electron from "./lib/electron.js"
 import child_process from "node:child_process"
 import m3u8 from "m3u8-parser"
 import axios from "axios"
+import { EventEmitter } from "node:events"
 
 const devMode = (process.argv[2] === "dev") ? true : false
 const nextApp = next({ dev: devMode, dir: electron.app.getAppPath() })
 const getHandler = nextApp.getRequestHandler()
 const __dirname = import.meta.dirname
+const ffmpegUpdateEvent = new EventEmitter()
 
 let ffmpegPath
 let activeProcesses = []
@@ -24,6 +26,10 @@ app.use(express.urlencoded({
 app.disable('x-powered-by');
 app.use(express.static(__dirname + '/public'))
 
+ffmpegUpdateEvent.on("increase", (data) => {
+    console.log(((data.progress / data.total) * 100).toFixed(2) + "%", `Segment: ${data.progress} / ${data.total} Remaining: ${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`)
+})
+
 const ffmpegCloseHandle = async (proc) => {
     proc.on("exit", () => {
         activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
@@ -33,6 +39,25 @@ const ffmpegCloseHandle = async (proc) => {
         }
         else {
             canceled = canceled.filter((data) => data !== result[0])
+        }
+    })
+}
+
+const ffmpegProgressHandler = async (proc, playlist) => {
+    var currRegex = new RegExp(`.*Opening '${playlist.replace("playlist.m3u8", "")}\\d{1,}.ts' for reading.*`, "g")
+    let i = 1
+    var parser = new m3u8.Parser()
+    await axios.get(playlist).then(async (data) => {
+        await parser.push(data.data)
+        await parser.end()
+    })
+    let startTime = Date.now()
+    let prevTime = Date.now()
+    proc.stderr.on("data", (data) => {
+        if ((data.toString()).match(currRegex) !== null) {
+           ffmpegUpdateEvent.emit("increase", { source: playlist, progress: i, total: parser.manifest.segments.length, prevTime: prevTime, currentTime: Date.now(), startTime: startTime })
+           prevTime = Date.now()
+           i++
         }
     })
 }
@@ -86,6 +111,7 @@ nextApp.prepare().then(() => {
         if (!cancel) {
             let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
             ffmpegCloseHandle(process)
+            ffmpegProgressHandler(process, source)
             activeProcesses.push({ source: source, proc: process })
         }
         res.json({ cancel: cancel, source: source })
