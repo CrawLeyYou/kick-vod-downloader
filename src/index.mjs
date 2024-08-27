@@ -8,6 +8,8 @@ import axios from "axios"
 import {
     EventEmitter
 } from "node:events"
+import { createServer } from "node:http"
+import { Server } from "socket.io"
 
 const devMode = (process.argv[2] === "dev") ? true : false
 const nextApp = next({
@@ -17,12 +19,13 @@ const nextApp = next({
 const getHandler = nextApp.getRequestHandler()
 const __dirname = import.meta.dirname
 const ffmpegEvents = new EventEmitter()
+const app = express()
+const httpServer = createServer(app)
+const io = new Server(httpServer)
 
 let ffmpegPath
 let activeProcesses = []
 let canceled = []
-
-const app = express()
 
 app.use(express.json());
 app.use(express.urlencoded({
@@ -32,20 +35,28 @@ app.disable('x-powered-by');
 app.use(express.static(__dirname + '/public'))
 
 ffmpegEvents.on("increase", (data) => {
-    console.log(((data.progress / data.total) * 100).toFixed(2) + "%", `Segment: ${data.progress} / ${data.total} Remaining: ${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`)
+    let betterData = {
+        uuid: data.uuid,
+        progress: ((data.progress / data.total) * 100).toFixed(2),
+        segment: `${data.progress} / ${data.total}`,
+        remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`,
+    }
+    io.emit("increase", JSON.stringify(betterData))
 })
 
+/* I'll add this later
 ffmpegEvents.on("details", (data) => {
     let betterData = {
+        uuid: data.uuid,
         downloadedFrames: data.details.split("frame=")[1].split("fps")[0].replaceAll(" ", ""),
         bitrate: data.details.split("bitrate=")[1].split("speed")[0].replaceAll(" ", ""),
         fileSize: data.details.split("size=")[1].split("time")[0].replaceAll(" ", ""),
         downloadedTotalTime: data.details.split("time=")[1].split("bitrate")[0].replaceAll(" ", "")
     }
-    console.log(betterData)
+    io.emit("details", JSON.stringify(betterData))
 })
-
-const ffmpegCloseHandle = async (proc) => {
+*/
+const ffmpegCloseHandler = async (proc) => {
     proc.on("exit", () => {
         activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
         var result = (proc.spawnargs.filter((data) => {
@@ -59,7 +70,7 @@ const ffmpegCloseHandle = async (proc) => {
     })
 }
 
-const ffmpegProgressHandler = async (proc, playlist) => {
+const ffmpegProgressHandler = async (proc, playlist, uuid) => {
     var currRegex = new RegExp(`.*Opening '${playlist.replace("playlist.m3u8", "")}\\d{1,}.ts' for reading.*`, "g")
     let i = 1
     var parser = new m3u8.Parser()
@@ -72,7 +83,7 @@ const ffmpegProgressHandler = async (proc, playlist) => {
     proc.stderr.on("data", (data) => {
         if ((data.toString()).match(currRegex) !== null) {
             ffmpegEvents.emit("increase", {
-                source: playlist,
+                uuid: uuid,
                 progress: i,
                 total: parser.manifest.segments.length,
                 prevTime: prevTime,
@@ -83,15 +94,18 @@ const ffmpegProgressHandler = async (proc, playlist) => {
             i++
         } else if ((data.toString()).match(/.*frame=\s{0,}\d{1,}\sfps=.*/g)) {
             ffmpegEvents.emit("details", {
-                source: playlist,
+                uuid: uuid,
                 details: data.toString()
-            })
+            }) // This doesnt do anything rn since L47-L58 is commented out
+        }
+        else {
+            console.log(data.toString())
         }
     })
 }
 
 nextApp.prepare().then(() => {
-    app.listen(3000, async () => {
+    httpServer.listen(3000, async () => {
         electron.app.whenReady().then(electron.createWindow).catch((err) => {
             electron.createCriticalError("An error occurred while creating the window.", err.message)
         })
@@ -99,6 +113,10 @@ nextApp.prepare().then(() => {
 
     app.get("/", (req, res) => {
         return nextApp.render(req, res, "/")
+    })
+
+    io.on("connection", (socket) => {
+        console.log("New Connection!") // :3
     })
 
     app.post("/api/download", async (req, res) => {
@@ -129,18 +147,21 @@ nextApp.prepare().then(() => {
                 }
             })
         }
-        await electron.createFolderSelectDialog().then((data) => {
-            if (!data.canceled) {
-                savePath = path.join(data.filePath)
-            } else {
-                cancel = true
-            }
-        })
+        if (!cancel) {
+            await electron.createFolderSelectDialog().then((data) => {
+                if (!data.canceled) {
+                    savePath = path.join(data.filePath)
+                } else {
+                    cancel = true
+                }
+            })
+        }
         if (!cancel) {
             let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
-            ffmpegCloseHandle(process)
-            ffmpegProgressHandler(process, source)
+            ffmpegCloseHandler(process)
+            ffmpegProgressHandler(process, source, parameters.uuid)
             activeProcesses.push({
+                uuid: parameters.uuid,
                 source: source,
                 proc: process
             })
@@ -154,7 +175,7 @@ nextApp.prepare().then(() => {
     app.post("/api/cancel", (req, res) => {
         let killed = false
         activeProcesses.map(async (data) => {
-            if (data.source === req.body.source) {
+            if (data.uuid === req.body?.uuid) {
                 canceled.push(data.source)
                 data.proc.kill()
                 killed = true

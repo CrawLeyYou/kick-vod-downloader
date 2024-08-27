@@ -20,7 +20,8 @@ const createWindow = async () => {
         autoHideMenuBar: !devmode,
         minWidth: 850,
         minHeight: 550,
-        height: 550
+        height: 550,
+        icon: "./public/logo.png" || null,
     })
     win.loadURL('http://localhost:3000')
 }
