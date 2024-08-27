@@ -55,6 +55,9 @@ export default function Home() {
         element.style.display = "block"
         element.firstElementChild.style.transform = `translateX(-${100 - (JSONData.progress || 0)}%)`
       }
+      if (document.getElementById('button-' + JSONData.uuid)?.innerText === "Download") {
+        cancelButton(JSONData.uuid)
+      }
     })
   })
 
@@ -64,8 +67,22 @@ export default function Home() {
       if (element) {
         element.style.display = "none"
       }
+      if (document.getElementById('button-' + vod.video.uuid)?.innerText === "Cancel") {
+        downloadButton(vod.video.uuid)
+      }
     })
   }, [vods])
+
+  const downloadButton = (uuid) => {
+    document.getElementById("button-" + uuid).setAttribute("data-state", "download")
+    document.getElementById("button-" + uuid).innerText = "Download"
+    document.getElementById("progress-" + uuid).style.display = "none"
+  }
+
+  const cancelButton = (uuid) => {
+    document.getElementById('button-' + uuid).setAttribute("data-state", "cancel")
+    document.getElementById('button-' + uuid).innerText = "Cancel"
+  }
 
   const fetchVODs = async () => {
     try {
@@ -119,8 +136,7 @@ export default function Home() {
       resolution: selectedRes
     }, []).then((resp) => {
       if (!resp.data.cancel) {
-        document.getElementById('button-' + selectedUUID).setAttribute("data-state", "cancel")
-        document.getElementById('button-' + selectedUUID).innerText = "Cancel"
+        cancelButton(selectedUUID)
         toast("Downloading VOD", {
           description: "with resolution " + selectedRes,
           action: {
@@ -135,9 +151,7 @@ export default function Home() {
   const cancelDownload = async (data) => {
     axios.post("/api/cancel", data, []).then((response) => {
       if (response.data.status !== "nochange") {
-        document.getElementById("button-" + data.uuid).setAttribute("data-state", "download")
-        document.getElementById("button-" + data.uuid).innerText = "Download"
-        document.getElementById("progress-" + data.uuid).style.display = "none"
+        downloadButton(data.uuid)
         toast("Download Cancelled", {
           description: "The download has been cancelled.",
           action: {
