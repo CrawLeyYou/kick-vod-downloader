@@ -44,7 +44,6 @@ ffmpegEvents.on("increase", (data) => {
     io.emit("increase", JSON.stringify(betterData))
 })
 
-/* I'll add this later
 ffmpegEvents.on("details", (data) => {
     let betterData = {
         uuid: data.uuid,
@@ -55,7 +54,7 @@ ffmpegEvents.on("details", (data) => {
     }
     io.emit("details", JSON.stringify(betterData))
 })
-*/
+
 const ffmpegCloseHandler = async (proc) => {
     proc.on("exit", () => {
         activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
@@ -96,7 +95,7 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
             ffmpegEvents.emit("details", {
                 uuid: uuid,
                 details: data.toString()
-            }) // This doesnt do anything rn since L47-L58 is commented out
+            })
         }
         else {
             console.log(data.toString())

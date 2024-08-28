@@ -33,6 +33,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription
 } from "@/components/ui/alert-dialog"
 
 const socket = socketIO.connect('ws://localhost:3000')
@@ -41,11 +42,21 @@ export default function Home() {
   const kickAPI = "https://kick.com/api/v1/"
   const [inputData, setInputData] = React.useState("")
   const [vods, setVODs] = React.useState([])
-  const [open, dialogSetOpen] = React.useState(false)
+  const [resOpenState, setResOpenState] = React.useState(false)
   const [resolutions, setResolutions] = React.useState([])
   const [selectedRes, setSelectedRes] = React.useState("")
   const [selectedVOD, setSelectedVOD] = React.useState("")
   const [selectedUUID, setSelectedUUID] = React.useState("")
+  const [detailsOpenState, setDetailsOpenState] = React.useState(false)
+  const selectedDetails = React.useRef("")
+  const [details, setDetails] = React.useState({})
+
+  socket.on("details", (data) => {
+    var JSONData = JSON.parse(data)
+    if (JSONData.uuid === selectedDetails.current) {
+      setDetails(JSONData)
+    }
+  })
 
   React.useEffect(() => {
     socket.on("increase", (data) => {
@@ -77,11 +88,13 @@ export default function Home() {
     document.getElementById("button-" + uuid).setAttribute("data-state", "download")
     document.getElementById("button-" + uuid).innerText = "Download"
     document.getElementById("progress-" + uuid).style.display = "none"
+    document.getElementById("details-button" + uuid).style.display = "none"
   }
 
   const cancelButton = (uuid) => {
     document.getElementById('button-' + uuid).setAttribute("data-state", "cancel")
     document.getElementById('button-' + uuid).innerText = "Cancel"
+    document.getElementById("details-button" + uuid).style.display = "inline"
   }
 
   const fetchVODs = async () => {
@@ -124,7 +137,7 @@ export default function Home() {
         setSelectedUUID(event.target.getAttribute("data-uuid"))
         setResolutions(fetch.data.resolutions)
         setSelectedVOD(res.source)
-        dialogSetOpen(true)
+        setResOpenState(true)
       })
     })
   }
@@ -162,7 +175,9 @@ export default function Home() {
       }
     })
   }
-  const cancelDialog = async () => dialogSetOpen(false)
+
+  const cancelResDialog = async () => setResOpenState(false)
+  const cancelDetailsDialog = async () => setDetailsOpenState(false)
 
   const fetchVODProperties = async (vodID) => {
     try {
@@ -171,6 +186,11 @@ export default function Home() {
     } catch (e) {
       console.log(e)
     }
+  }
+
+  const detailsDialog = async (event) => {
+    selectedDetails.current = (event.target.getAttribute("data-uuid"))
+    setDetailsOpenState(true)
   }
 
   const handleInputChange = (event) => {
@@ -211,11 +231,12 @@ export default function Home() {
               <span className="m-2">{vod.start_time}</span>
               <br />
               <Button className="m-2 bg-black text-white" id={"button-" + vod.video.uuid} data-state="download" data-uuid={vod.video.uuid} onClick={buttonEventSelection}>Download</Button>
+              <Button className="m-2 bg-black text-white" id={"details-button" + vod.video.uuid} style={{ "display": "none"}} data-uuid={vod.video.uuid} onClick={detailsDialog}>Details</Button>
             </div>
           )
         })}
       </div>
-      <AlertDialog open={open} onOpenChange={dialogSetOpen}>
+      <AlertDialog open={resOpenState} onOpenChange={setResOpenState}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Please Select A Resolution</AlertDialogTitle>
@@ -234,7 +255,21 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={downloadVOD}>Select</AlertDialogAction>
-            <AlertDialogCancel onClick={cancelDialog}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelResDialog}>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={detailsOpenState} onOpenChange={setDetailsOpenState}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Details</AlertDialogTitle>
+            <AlertDialogDescription>Downloaded Frames: {details.downloadedFrames}</AlertDialogDescription>
+            <AlertDialogDescription>File Size: {details.fileSize}</AlertDialogDescription>
+            <AlertDialogDescription>Video Bitrate: {details.bitrate}</AlertDialogDescription>
+            <AlertDialogDescription>Downloaded Total Time: {details.downloadedTotalTime}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDetailsDialog}>Close</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
