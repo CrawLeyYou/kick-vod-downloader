@@ -55,14 +55,14 @@ ffmpegEvents.on("details", (data) => {
     io.emit("details", JSON.stringify(betterData))
 })
 
-const ffmpegCloseHandler = async (proc) => {
+const ffmpegCloseHandler = async (proc, savePath) => {
     proc.on("exit", () => {
         activeProcesses = activeProcesses.filter(data => data.proc.pid !== proc.pid)
         var result = (proc.spawnargs.filter((data) => {
             if (canceled.includes(data)) return true
         }))
         if (result[0] === undefined) {
-            electron.createSuccessNotif()
+            electron.createSuccessNotif(savePath)
         } else {
             canceled = canceled.filter((data) => data !== result[0])
         }
@@ -157,7 +157,7 @@ nextApp.prepare().then(() => {
         }
         if (!cancel) {
             let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
-            ffmpegCloseHandler(process)
+            ffmpegCloseHandler(process, savePath)
             ffmpegProgressHandler(process, source, parameters.uuid)
             activeProcesses.push({
                 uuid: parameters.uuid,
