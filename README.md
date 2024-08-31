@@ -11,7 +11,7 @@
 # Usage
 - Download [FFmpeg](https://www.ffmpeg.org/download.html#build-windows) & [latest build](https://github.com/CrawLeyYou/kick-vod-downloader/releases/latest)
 
-https://github.com/user-attachments/assets/3741c338-de7e-4c03-a2a1-227bc4745633
+https://github.com/user-attachments/assets/6e992465-0db9-4ddc-a268-22ab46e6b12d
 
 # License
 This project is licensed under [MIT](https://opensource.org/licenses/MIT) license.
