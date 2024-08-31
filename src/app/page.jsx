@@ -50,6 +50,7 @@ export default function Home() {
   const [detailsOpenState, setDetailsOpenState] = React.useState(false)
   const selectedDetails = React.useRef("")
   const [details, setDetails] = React.useState({})
+  const [segments, setSegments] = React.useState("")
 
   socket.on("details", (data) => {
     var JSONData = JSON.parse(data)
@@ -68,6 +69,9 @@ export default function Home() {
       }
       if (document.getElementById('button-' + JSONData.uuid)?.innerText === "Download") {
         cancelButton(JSONData.uuid)
+      }
+      if (JSONData.uuid === selectedDetails.current) {
+        setSegments(JSONData.segment)
       }
     })
   })
@@ -191,6 +195,8 @@ export default function Home() {
   const detailsDialog = async (event) => {
     selectedDetails.current = (event.target.getAttribute("data-uuid"))
     setDetailsOpenState(true)
+    setDetails({})
+    setSegments("")
   }
 
   const handleInputChange = (event) => {
@@ -267,6 +273,7 @@ export default function Home() {
             <AlertDialogDescription>File Size: {details.fileSize}</AlertDialogDescription>
             <AlertDialogDescription>Video Bitrate: {details.bitrate}</AlertDialogDescription>
             <AlertDialogDescription>Downloaded Total Time: {details.downloadedTotalTime}</AlertDialogDescription>
+            <AlertDialogDescription>Segments: {segments}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelDetailsDialog}>Close</AlertDialogCancel>

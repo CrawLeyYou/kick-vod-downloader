@@ -39,7 +39,7 @@ ffmpegEvents.on("increase", (data) => {
         uuid: data.uuid,
         progress: ((data.progress / data.total) * 100).toFixed(2),
         segment: `${data.progress} / ${data.total}`,
-        remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)} minutes`,
+       // remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)}`, current remaining function somehow overflows the frontend, so commented out (will rewrite this on frontend)
     }
     io.emit("increase", JSON.stringify(betterData))
 })
@@ -71,7 +71,6 @@ const ffmpegCloseHandler = async (proc, savePath) => {
 
 const ffmpegProgressHandler = async (proc, playlist, uuid) => {
     var currRegex = new RegExp(`.*Opening '${playlist.replace("playlist.m3u8", "")}\\d{1,}.ts' for reading.*`, "g")
-    let i = 1
     var parser = new m3u8.Parser()
     await axios.get(playlist).then(async (data) => {
         await parser.push(data.data)
@@ -83,14 +82,13 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
         if ((data.toString()).match(currRegex) !== null) {
             ffmpegEvents.emit("increase", {
                 uuid: uuid,
-                progress: i,
+                progress: parseInt((data.toString()).match(currRegex)[0].split("/").pop().split(".ts")[0]) + 1,
                 total: parser.manifest.segments.length,
                 prevTime: prevTime,
                 currentTime: Date.now(),
                 startTime: startTime
             })
             prevTime = Date.now()
-            i++
         } else if ((data.toString()).match(/.*frame=\s{0,}\d{1,}\sfps=.*/g)) {
             ffmpegEvents.emit("details", {
                 uuid: uuid,
