@@ -30,7 +30,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.run_id }}
-        name: Release v ${{steps.package-version.outputs.result}}-${{ github.run_id }}
+        name: Release v${{steps.package-version.outputs.result}}-${{ github.run_id }}
         files: |
           dist/*.exe
           dist/*.msi
