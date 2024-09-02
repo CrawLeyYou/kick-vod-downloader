@@ -64,6 +64,11 @@
         "nsis"
       ]
     },
+    "linux": {
+      "target": [
+        "snap"
+      ]
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,

@@ -39,7 +39,7 @@ ffmpegEvents.on("increase", (data) => {
         uuid: data.uuid,
         progress: ((data.progress / data.total) * 100).toFixed(2),
         segment: `${data.progress} / ${data.total}`,
-       // remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)}`, current remaining function somehow overflows the frontend, so commented out (will rewrite this on frontend)
+        // remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)}`, current remaining function somehow overflows the frontend, so commented out (will rewrite this on frontend)
     }
     io.emit("increase", JSON.stringify(betterData))
 })
@@ -54,6 +54,37 @@ ffmpegEvents.on("details", (data) => {
     }
     io.emit("details", JSON.stringify(betterData))
 })
+
+const checkFFmpeg = async (path) => new Promise((resolve, reject) => {
+    child_process.execFile(path, ["-version"], (err, stdout, stderr) => {
+        (stdout.split("\n")[0] === "") ? resolve({ status: false, code: err.code}) : resolve({ status: true, response: stdout.split("\n")[0] }) 
+    })
+})
+
+if (electron.currentPlatform === "win") {
+    var ffmpegList = process.env.PATH.split(";").filter((data) => data.includes("ffmpeg"))
+    if (ffmpegList.length == 1) {
+        await checkFFmpeg(path.join(ffmpegList[0], "/ffmpeg.exe")).then((data) => {
+            if (data.status) {
+                ffmpegPath = path.join(ffmpegList[0], "/ffmpeg.exe")
+            }
+        })
+    } else if (ffmpegList.length > 1) {
+         for (var i = 0; ffmpegList.length > i; i++) {
+            var data = await checkFFmpeg(path.join(ffmpegList[i], "/ffmpeg.exe"))
+            if (data.status) {
+                ffmpegPath = path.join(ffmpegList[i], "/ffmpeg.exe")
+                break
+            }
+         }
+    }
+} else if (electron.currentPlatform === "linux") {
+    await checkFFmpeg("/bin/ffmpeg").then((data) => {
+        if (data.status) {
+            ffmpegPath = "/bin/ffmpeg"
+        }
+    })
+}
 
 const ffmpegCloseHandler = async (proc, savePath) => {
     proc.on("exit", () => {
@@ -99,6 +130,18 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
             console.log(data.toString())
         }
     })
+}
+
+const spawnFFmpeg = (source, savePath, uuid) => {
+    let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
+    ffmpegCloseHandler(process, savePath)
+    ffmpegProgressHandler(process, source, uuid)
+    activeProcesses.push({
+        uuid: uuid,
+        source: source,
+        proc: process
+    })
+    return process
 }
 
 nextApp.prepare().then(() => {
@@ -154,14 +197,7 @@ nextApp.prepare().then(() => {
             })
         }
         if (!cancel) {
-            let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
-            ffmpegCloseHandler(process, savePath)
-            ffmpegProgressHandler(process, source, parameters.uuid)
-            activeProcesses.push({
-                uuid: parameters.uuid,
-                source: source,
-                proc: process
-            })
+            spawnFFmpeg(source, savePath, parameters.uuid)
         }
         res.json({
             cancel: cancel,
