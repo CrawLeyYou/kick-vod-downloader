@@ -133,7 +133,7 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
 }
 
 const spawnFFmpeg = (source, savePath, uuid) => {
-    let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${savePath}`])
+    let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${(electron.currentPlatform === "win") ? savePath : savePath + ".mp4"}`])
     ffmpegCloseHandler(process, savePath)
     ffmpegProgressHandler(process, source, uuid)
     activeProcesses.push({
@@ -178,7 +178,7 @@ nextApp.prepare().then(() => {
                 error: err.message
             })
         })
-        if (ffmpegPath === undefined) {
+        if (ffmpegPath === undefined && electron.currentPlatform === "win") {
             await electron.createFFMPEGPathDialog().then((data) => {
                 if (!data.canceled) {
                     ffmpegPath = path.join(data.filePaths[0])
@@ -186,6 +186,9 @@ nextApp.prepare().then(() => {
                     cancel = true
                 }
             })
+        } else if (ffmpegPath === undefined && electron.currentPlatform === "linux") {
+            electron.createCriticalError("FFmpeg not found", "FFmpeg is not installed / corrupted on your system. Please install FFmpeg and restart the application.")
+            cancel = true
         }
         if (!cancel) {
             await electron.createFolderSelectDialog().then((data) => {

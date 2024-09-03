@@ -74,11 +74,11 @@ const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) =
 const createSuccessNotif = async (savePath) => {
     const notif = new Notification({
         title: "Finished Downloading",
-        body: `Click to see ${(currentPlatform === "win") ? savePath.split("\\").slice(-1)[0] : (currentPlatform === "linux") ? savePath.split("/").slice(-1)[0] : savePath}`
+        body: `Click to see ${(currentPlatform === "win") ? savePath.split("\\").slice(-1)[0] : (currentPlatform === "linux") ? savePath.split("/").slice(-1)[0] + ".mp4" : savePath}`
     })
     notif.on("click", () => {
         if (currentPlatform === "win") exec(`explorer /select,"${savePath}"`)
-        else if (currentPlatform === "linux") exec(`xdg-open "${savePath.split("/").splice(-1, 1).join("/")}"`)
+        else if (currentPlatform === "linux") exec(`xdg-open "${savePath.split("/").slice(0, -1).join("/")}"`)
     })
     notif.show()
 }

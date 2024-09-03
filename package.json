@@ -66,8 +66,15 @@
     },
     "linux": {
       "target": [
-        "snap"
-      ]
+        "snap",
+        "AppImage",
+        "tar.gz"
+      ],
+      "icon": "public/logo.png",
+      "category": "Utility"
+    },
+    "snap": {
+      "confinement": "classic"
     },
     "nsis": {
       "oneClick": false,
