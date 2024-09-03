@@ -70,6 +70,10 @@ export default function Home() {
       if (document.getElementById('button-' + JSONData.uuid)?.innerText === "Download") {
         cancelButton(JSONData.uuid)
       }
+      if (JSONData.progress == 100 && element) {
+        document.getElementById("downloaded-" + JSONData.uuid).style.display = "block"
+        downloadButton(JSONData.uuid)
+      }
       if (JSONData.uuid === selectedDetails.current) {
         setSegments(JSONData.segment)
       }
@@ -84,7 +88,11 @@ export default function Home() {
       }
       if (document.getElementById('button-' + vod.video.uuid)?.innerText === "Cancel") {
         downloadButton(vod.video.uuid)
+      } 
+      if (document.getElementById("downloaded-" + vod.video.uuid).style.display = "block") {
+        document.getElementById("downloaded-" + vod.video.uuid).style.display = "none"
       }
+        
     })
   }, [vods])
 
@@ -92,20 +100,21 @@ export default function Home() {
     document.getElementById("button-" + uuid).setAttribute("data-state", "download")
     document.getElementById("button-" + uuid).innerText = "Download"
     document.getElementById("progress-" + uuid).style.display = "none"
-    document.getElementById("details-button" + uuid).style.display = "none"
+    document.getElementById("details-button-" + uuid).style.display = "none"
   }
 
   const cancelButton = (uuid) => {
     document.getElementById('button-' + uuid).setAttribute("data-state", "cancel")
     document.getElementById('button-' + uuid).innerText = "Cancel"
-    document.getElementById("details-button" + uuid).style.display = "inline"
+    document.getElementById("details-button-" + uuid).style.display = "inline"
+    if (document.getElementById("downloaded-" + uuid).style.display = "block") document.getElementById("downloaded-" + uuid).style.display = "none"
   }
 
   const fetchVODs = async () => {
     try {
       if (inputData.match(/^https:\/\/kick.com\/video\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
         let res = await axios.get(`${kickAPI}video/${inputData.split("https://kick.com/video/")[1]}`)
-        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: res.data.livestream.thumbnail }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
+        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png"}, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
       }
       else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null) {
         let res = await axios.get(`${kickAPI}channels/${inputData}`)
@@ -232,12 +241,13 @@ export default function Home() {
               <ProgressPrimitive.Root style={{ "marginTop": "0.5rem", "width": "460px", "display": "none" }} id={"progress-" + vod.video.uuid} className={"relative h-4 w-full overflow-hidden rounded-full bg-secondary[&>*]:bg-zinc-950 m-2"}>
                 <ProgressPrimitive.Indicator className="h-full w-full flex-1 bg-primary transition-all" style={{ transform: 'translateX(-100%)' }} />
               </ProgressPrimitive.Root>
+              <span className="m-2" id={"downloaded-" + vod.video.uuid} style={{ "color": "green", "display": "none" }}>Downloaded</span>
               <span className="m-2">{vod.session_title}</span>
               <br />
               <span className="m-2">{vod.start_time}</span>
               <br />
               <Button className="m-2 bg-black text-white" id={"button-" + vod.video.uuid} data-state="download" data-uuid={vod.video.uuid} onClick={buttonEventSelection}>Download</Button>
-              <Button className="m-2 bg-black text-white" id={"details-button" + vod.video.uuid} style={{ "display": "none"}} data-uuid={vod.video.uuid} onClick={detailsDialog}>Details</Button>
+              <Button className="m-2 bg-black text-white" id={"details-button-" + vod.video.uuid} style={{ "display": "none" }} data-uuid={vod.video.uuid} onClick={detailsDialog}>Details</Button>
             </div>
           )
         })}

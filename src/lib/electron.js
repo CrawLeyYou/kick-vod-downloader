@@ -11,9 +11,13 @@ const {
 
 let win
 let devmode = (process.argv[2] === "dev") ? true : false
+let currentPlatform;
 
 if (process.platform === "win32") {
     app.setAppUserModelId("Kick VOD Downloader");
+    currentPlatform = "win"
+} else if (process.platform === "linux") {
+    currentPlatform = "linux"
 }
 
 const createWindow = async () => {
@@ -70,10 +74,11 @@ const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) =
 const createSuccessNotif = async (savePath) => {
     const notif = new Notification({
         title: "Finished Downloading",
-        body: `Click to see ${savePath.split("\\").slice(-1)[0]}`
+        body: `Click to see ${(currentPlatform === "win") ? savePath.split("\\").slice(-1)[0] : (currentPlatform === "linux") ? savePath.split("/").slice(-1)[0] + ".mp4" : savePath}`
     })
     notif.on("click", () => {
-        exec(`explorer /select,"${savePath}"`)
+        if (currentPlatform === "win") exec(`explorer /select,"${savePath}"`)
+        else if (currentPlatform === "linux") exec(`xdg-open "${savePath.split("/").slice(0, -1).join("/")}"`)
     })
     notif.show()
 }
@@ -84,5 +89,6 @@ module.exports = {
     createCriticalError,
     createFolderSelectDialog,
     createFFMPEGPathDialog,
-    createSuccessNotif
+    createSuccessNotif,
+    currentPlatform
 }

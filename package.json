@@ -1,6 +1,6 @@
 {
   "name": "kick-vod-downloader",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A tool to download VODs from Kick.",
   "main": "./src/index.mjs",
   "private": true,
@@ -63,6 +63,18 @@
         "msi",
         "nsis"
       ]
+    },
+    "linux": {
+      "target": [
+        "snap",
+        "AppImage",
+        "tar.gz"
+      ],
+      "icon": "public/logo.png",
+      "category": "Utility"
+    },
+    "snap": {
+      "confinement": "classic"
     },
     "nsis": {
       "oneClick": false,
