@@ -33,7 +33,7 @@
     "express": "^4.19.2",
     "lucide-react": "^0.424.0",
     "m3u8-parser": "^7.1.0",
-    "next": "14.2.5",
+    "next": "^14.2.12",
     "next-themes": "^0.3.0",
     "react": "^18",
     "react-dom": "^18",

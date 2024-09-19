@@ -88,11 +88,11 @@ export default function Home() {
       }
       if (document.getElementById('button-' + vod.video.uuid)?.innerText === "Cancel") {
         downloadButton(vod.video.uuid)
-      } 
+      }
       if (document.getElementById("downloaded-" + vod.video.uuid).style.display = "block") {
         document.getElementById("downloaded-" + vod.video.uuid).style.display = "none"
       }
-        
+
     })
   }, [vods])
 
@@ -114,7 +114,7 @@ export default function Home() {
     try {
       if (inputData.match(/^https:\/\/kick.com\/video\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
         let res = await axios.get(`${kickAPI}video/${inputData.split("https://kick.com/video/")[1]}`)
-        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png"}, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
+        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png" }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
       }
       else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null) {
         let res = await axios.get(`${kickAPI}channels/${inputData}`)
@@ -216,20 +216,24 @@ export default function Home() {
     <main className="bg-white">
       <div className="flex h-screen">
         <Card className="m-auto bg-white border-gray-400 w-[350px]">
-          <CardHeader>
-            <CardTitle className="flex text-black justify-center">Kick VOD Downloader</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <Label>Enter a username / VOD link </Label>
+          <form onSubmit={e => {
+            e.preventDefault();
+          }}>
+            <CardHeader>
+              <CardTitle className="flex text-black justify-center">Kick VOD Downloader</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid w-full items-center gap-4">
+                <div className="flex flex-col space-y-1.5">
+                  <Label>Enter a username / VOD link </Label>
+                </div>
+                <Input type="username" value={inputData} placeholder="Username / VOD" onChange={handleInputChange} />
               </div>
-              <Input type="username" value={inputData} placeholder="Username / VOD" onChange={handleInputChange} />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="bg-black text-white" onClick={fetchVODs}>Fetch</Button>
-          </CardFooter>
+            </CardContent>
+            <CardFooter>
+              <Button className="bg-black text-white" onClick={fetchVODs}>Fetch</Button>
+            </CardFooter>
+          </form>
         </Card>
       </div>
       <div className="flex flex-wrap">
