@@ -132,12 +132,15 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
     })
 }
 
-const spawnFFmpeg = (source, savePath, uuid) => {
-    let process = child_process.execFile(ffmpegPath, ["-i", `${source}`, "-c", "copy", `${(electron.currentPlatform === "win") ? savePath : savePath + ".mp4"}`])
+const spawnFFmpeg = (source, savePath, parameters) => {
+    let ffmpegOptions = ["-i", source]
+    if (!parameters.entireVOD) {ffmpegOptions.push("-ss", parameters.startTime, "-to", parameters.endTime)}
+    ffmpegOptions.push("-c", "copy", `${(electron.currentPlatform === "win") ? savePath : savePath + ".mp4"}`)
+    let process = child_process.execFile(ffmpegPath, ffmpegOptions)
     ffmpegCloseHandler(process, savePath)
-    ffmpegProgressHandler(process, source, uuid)
+    ffmpegProgressHandler(process, source, parameters.uuid)
     activeProcesses.push({
-        uuid: uuid,
+        uuid: parameters.uuid,
         source: source,
         proc: process
     })
@@ -200,7 +203,7 @@ nextApp.prepare().then(() => {
             })
         }
         if (!cancel) {
-            spawnFFmpeg(source, savePath, parameters.uuid)
+            spawnFFmpeg(source, savePath, parameters)
         }
         res.json({
             cancel: cancel,

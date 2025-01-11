@@ -35,6 +35,8 @@ import {
   AlertDialogTitle,
   AlertDialogDescription
 } from "@/components/ui/alert-dialog"
+import { Checkbox } from "@/components/ui/checkbox"
+
 
 const socket = socketIO.connect('ws://localhost:3000')
 
@@ -51,6 +53,8 @@ export default function Home() {
   const selectedDetails = React.useRef("")
   const [details, setDetails] = React.useState({})
   const [segments, setSegments] = React.useState("")
+  const [entireVOD, setEntireVOD] = React.useState(true)
+  const [VODEndTime, setVODEndTime] = React.useState("")
 
   socket.on("details", (data) => {
     var JSONData = JSON.parse(data)
@@ -136,6 +140,7 @@ export default function Home() {
   const buttonEventSelection = async (event) => {
     if (event.target.getAttribute("data-state") === "download") {
       fetchResolution(event)
+      setVODEndTime(document.getElementById("timestamp-" + event.target.getAttribute("data-uuid")).innerText)
     }
     else if (event.target.getAttribute("data-state") === "cancel") {
       cancelDownload({ uuid: event.target.getAttribute("data-uuid") })
@@ -156,23 +161,38 @@ export default function Home() {
   }
 
   const downloadVOD = async () => {
-    axios.post("/api/download", {
-      source: selectedVOD,
-      uuid: selectedUUID,
-      resolution: selectedRes
-    }, []).then((resp) => {
-      if (!resp.data.cancel) {
-        cancelButton(selectedUUID)
-        toast("Downloading VOD", {
-          description: "with resolution " + selectedRes,
-          action: {
-            label: "Cancel",
-            onClick: () => cancelDownload({ uuid: selectedUUID }),
-          },
-        })
-      }
-    })
+
+    if (entireVOD && selectedRes !== "" || selectedRes !== "" && document.getElementById("startTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null && document.getElementById("endTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null) {
+      axios.post("/api/download", {
+        source: selectedVOD,
+        uuid: selectedUUID,
+        resolution: selectedRes,
+        entireVOD: entireVOD,
+        startTime: document.getElementById("startTime").value,
+        endTime: document.getElementById("endTime").value
+      }, []).then((resp) => {
+        if (!resp.data.cancel) {
+          cancelButton(selectedUUID)
+          toast("Downloading VOD", {
+            description: "with resolution " + selectedRes,
+            action: {
+              label: "Cancel",
+              onClick: () => cancelDownload({ uuid: selectedUUID }),
+            },
+          })
+        }
+      })
+    } else {
+      toast("Invalid time format", {
+        description: "Please enter a valid time format. i.e: 00:00:00",
+        action: {
+          label: "Close",
+          onClick: () => { },
+        },
+      })
+    }
   }
+
 
   const cancelDownload = async (data) => {
     axios.post("/api/cancel", data, []).then((response) => {
@@ -189,7 +209,16 @@ export default function Home() {
     })
   }
 
-  const cancelResDialog = async () => setResOpenState(false)
+  const cancelResDialog = async () => {
+    setResOpenState(false)
+    setEntireVOD(true)
+  }
+
+  const settingsDialog = async (event) => {
+    setResOpenState(event)
+    setEntireVOD(!event)
+  }
+
   const cancelDetailsDialog = async () => setDetailsOpenState(false)
 
   const fetchVODProperties = async (vodID) => {
@@ -240,7 +269,7 @@ export default function Home() {
         {vods.map((vod, i) => {
           return (
             <div key={i} className="m-auto w-[480px] border-gray-200 border-2 rounded">
-              <span className="absolute text-white bg-zinc-950 bg-opacity-40">{new Date(vod.duration).toUTCString().match("..:..:..")[0]}</span>
+              <span id={"timestamp-" + vod.video.uuid} className="absolute text-white bg-zinc-950 bg-opacity-40">{new Date(vod.duration).toUTCString().match("..:..:..")[0]}</span>
               <Image className="rounded" src={vod.thumbnail.src} alt="Thumbnail" width={1280} height={720} />
               <ProgressPrimitive.Root style={{ "marginTop": "0.5rem", "width": "460px", "display": "none" }} id={"progress-" + vod.video.uuid} className={"relative h-4 w-full overflow-hidden rounded-full bg-secondary[&>*]:bg-zinc-950 m-2"}>
                 <ProgressPrimitive.Indicator className="h-full w-full flex-1 bg-primary transition-all" style={{ transform: 'translateX(-100%)' }} />
@@ -256,10 +285,10 @@ export default function Home() {
           )
         })}
       </div>
-      <AlertDialog open={resOpenState} onOpenChange={setResOpenState}>
+      <AlertDialog open={resOpenState} onOpenChange={settingsDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Please Select A Resolution</AlertDialogTitle>
+            <AlertDialogTitle>Select settings you want for the video</AlertDialogTitle>
             <Select onValueChange={setSelectedRes}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Resolution" />
@@ -272,9 +301,19 @@ export default function Home() {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <div className="flex items-center space-x-2">
+              <Checkbox defaultChecked={true} onCheckedChange={setEntireVOD} />
+              <Label>Download Entire VOD</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="startTime">Start</Label>
+              <Input className="" type="text" disabled={entireVOD} id="startTime" defaultValue={"00:00:00"}></Input>
+              <Label htmlFor="endTime">End</Label>
+              <Input type="text" disabled={entireVOD} defaultValue={VODEndTime} id="endTime"></Input>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={downloadVOD}>Select</AlertDialogAction>
+            <AlertDialogAction onClick={downloadVOD}>Download</AlertDialogAction>
             <AlertDialogCancel onClick={cancelResDialog}>Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
