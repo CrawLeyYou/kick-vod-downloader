@@ -65,6 +65,14 @@
         "nsis"
       ]
     },
+    "mac": {
+      "target": [
+        "dmg",
+        "pkg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    },
     "linux": {
       "target": [
         "snap",

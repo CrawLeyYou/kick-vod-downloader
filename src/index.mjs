@@ -85,6 +85,12 @@ if (electron.currentPlatform === "win") {
             ffmpegPath = "/bin/ffmpeg"
         }
     })
+} else if (electron.currentPlatform === "darwin") {
+    await checkFFmpeg("/Applications/ffmpeg").then((data) => {
+        if (data.status) {
+            ffmpegPath = "/Applications/ffmpeg"
+        }
+    })
 }
 
 const ffmpegCloseHandler = async (proc, savePath) => {
@@ -199,7 +205,7 @@ const ffmpegProgressHandler = async (proc, playlist, parameters) => {
 const spawnFFmpeg = (source, savePath, parameters) => {
     let ffmpegOptions = ["-protocol_whitelist", "file,http,https,tcp,tls", "-i", source]
     if (!parameters.entireVOD) { ffmpegOptions.push("-ss", parameters.startTime, "-to", parameters.endTime) }
-    ffmpegOptions.push("-c", "copy", `${(electron.currentPlatform === "win") ? savePath : savePath + ".mp4"}`)
+    ffmpegOptions.push("-c", "copy", `${(electron.currentPlatform === "win" || electron.currentPlatform === "darwin") ? savePath : savePath + ".mp4"}`)
     let process = child_process.execFile(ffmpegPath, ffmpegOptions)
     ffmpegCloseHandler(process, savePath)
     ffmpegProgressHandler(process, source, parameters)
@@ -245,7 +251,7 @@ nextApp.prepare().then(() => {
                 error: err.message
             })
         })
-        if (ffmpegPath === undefined && electron.currentPlatform === "win") {
+        if (ffmpegPath === undefined && electron.currentPlatform === "win" || ffmpegPath === undefined && electron.currentPlatform === "darwin") {
             await electron.createFFMPEGPathDialog().then((data) => {
                 if (!data.canceled) {
                     ffmpegPath = path.join(data.filePaths[0])

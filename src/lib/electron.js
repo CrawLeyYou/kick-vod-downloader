@@ -18,6 +18,8 @@ if (process.platform === "win32") {
     currentPlatform = "win"
 } else if (process.platform === "linux") {
     currentPlatform = "linux"
+} else if (process.platform === "darwin") {
+    currentPlatform = "darwin"
 }
 
 const createWindow = async () => {
@@ -63,8 +65,7 @@ const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) =
         title: "Select FFMPEG Executable",
         properties: ['openFile'],
         filters: [{
-            name: 'Windows Executables',
-            extensions: ['exe']
+            name: 'Executables',
         }]
     }).then((data) => {
         resolve(data)
@@ -74,11 +75,12 @@ const createFFMPEGPathDialog = async () => new Promise(async (resolve, reject) =
 const createSuccessNotif = async (savePath) => {
     const notif = new Notification({
         title: "Finished Downloading",
-        body: `Click to see ${(currentPlatform === "win") ? savePath.split("\\").slice(-1)[0] : (currentPlatform === "linux") ? savePath.split("/").slice(-1)[0] + ".mp4" : savePath}`
+        body: `Click to see ${(currentPlatform === "win") ? savePath.split("\\").slice(-1)[0] : (currentPlatform === "linux" || currentPlatform === "darwin") ? savePath.split("/").slice(-1)[0] + ((currentPlatform === "linux") ? ".mp4" : "") : savePath}`
     })
     notif.on("click", () => {
         if (currentPlatform === "win") exec(`explorer /select,"${savePath}"`)
         else if (currentPlatform === "linux") exec(`xdg-open "${savePath.split("/").slice(0, -1).join("/")}"`)
+        else if (currentPlatform === "darwin") exec(`open -R "${savePath}"`)
     })
     notif.show()
 }
