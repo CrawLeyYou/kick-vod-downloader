@@ -30,6 +30,7 @@ jobs:
       with:
         tag_name: ${{ github.run_id }}
         name: Pre-Release v${{steps.package-version.outputs.result}}-${{ github.run_id }}
+        prerelease: true
         files: |
           dist/*.exe
           dist/*.msi

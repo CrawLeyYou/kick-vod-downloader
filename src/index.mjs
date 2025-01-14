@@ -10,6 +10,7 @@ import {
 } from "node:events"
 import { createServer } from "node:http"
 import { Server } from "socket.io"
+import fs from "node:fs"
 
 const devMode = (process.argv[2] === "dev") ? true : false
 const nextApp = next({
@@ -57,7 +58,7 @@ ffmpegEvents.on("details", (data) => {
 
 const checkFFmpeg = async (path) => new Promise((resolve, reject) => {
     child_process.execFile(path, ["-version"], (err, stdout, stderr) => {
-        (stdout.split("\n")[0] === "") ? resolve({ status: false, code: err.code}) : resolve({ status: true, response: stdout.split("\n")[0] }) 
+        (stdout.split("\n")[0] === "") ? resolve({ status: false, code: err.code }) : resolve({ status: true, response: stdout.split("\n")[0] })
     })
 })
 
@@ -70,13 +71,13 @@ if (electron.currentPlatform === "win") {
             }
         })
     } else if (ffmpegList.length > 1) {
-         for (var i = 0; ffmpegList.length > i; i++) {
+        for (var i = 0; ffmpegList.length > i; i++) {
             var data = await checkFFmpeg(path.join(ffmpegList[i], "/ffmpeg.exe"))
             if (data.status) {
                 ffmpegPath = path.join(ffmpegList[i], "/ffmpeg.exe")
                 break
             }
-         }
+        }
     }
 } else if (electron.currentPlatform === "linux") {
     await checkFFmpeg("/bin/ffmpeg").then((data) => {
@@ -100,21 +101,84 @@ const ffmpegCloseHandler = async (proc, savePath) => {
     })
 }
 
-const ffmpegProgressHandler = async (proc, playlist, uuid) => {
-    var currRegex = new RegExp(`.*Opening '${playlist.replace("playlist.m3u8", "")}\\d{1,}.ts' for reading.*`, "g")
+const createM3U8Playlist = async (source, savePath, parameters) => {
     var parser = new m3u8.Parser()
-    await axios.get(playlist).then(async (data) => {
+    let startTimeAsSeconds = 0, endTimeAsSeconds = 0, currentTotal = 0, parsedEnd = 0, parsedStart = 0, totalSegments = 0
+    let startURI = "", endURI = "", sourceWOPlaylist = source.split("/").slice(0, -1).join("/") + "/"
+    let tempPath = path.resolve(electron.app.getPath("temp") + `/${parameters.uuid}.m3u8`)
+    const writeStream = fs.createWriteStream(tempPath)
+
+    parameters.startTime.split(":").map((data, index) => {
+        startTimeAsSeconds += parseInt(data) * Math.pow(60, (2 - index))
+    })
+
+    parameters.endTime.split(":").map((data, index) => {
+        endTimeAsSeconds += parseInt(data) * Math.pow(60, (2 - index))
+    })
+
+    await axios.get(source).then(async (data) => {
         await parser.push(data.data)
         await parser.end()
     })
+
+    writeStream.write([
+        '#EXTM3U',
+        `#EXT-X-VERSION:${parser.manifest.version}`,
+        `#EXT-X-TARGETDURATION:${parser.manifest.targetDuration}`,
+        `#EXT-X-PLAYLIST-TYPE:${parser.manifest.playlistType}`,
+        `#EXT-X-MEDIA-SEQUENCE:${parser.manifest.mediaSequence}\n`
+    ].join("\n"))
+
+    const addSegment = (uri, duration) => {
+        writeStream.write([
+            `#EXTINF:${duration},`,
+            `${sourceWOPlaylist}${uri}\n`
+        ].join("\n"))
+        totalSegments++
+    }
+
+    for (let segment of parser.manifest.segments) {
+        if (currentTotal + segment.duration >= startTimeAsSeconds && startURI === "" && currentTotal < endTimeAsSeconds) {
+            addSegment(segment.uri, segment.duration)
+            parsedStart = currentTotal
+            startURI = segment.uri
+        } else if (currentTotal - segment.duration >= endTimeAsSeconds && startURI !== "" && endURI === "") {
+            addSegment(segment.uri, segment.duration)
+            parsedEnd = currentTotal
+            endURI = segment.uri
+            break
+        } else if (startURI !== "" && endURI === "") {
+            addSegment(segment.uri, segment.duration)
+        }
+        currentTotal += segment.duration
+    }
+
+    writeStream.write("#EXT-X-ENDLIST")
+    writeStream.end()
+    parameters.segments = totalSegments
+    parameters.startSegment = parseInt(startURI.split(".ts")[0])
+    parameters.startTime = startTimeAsSeconds - parsedStart
+    parameters.endTime = parsedEnd - startTimeAsSeconds - (parsedEnd - endTimeAsSeconds) + parameters.startTime
+    spawnFFmpeg(tempPath, savePath, parameters)
+}
+
+const ffmpegProgressHandler = async (proc, playlist, parameters) => {
+    var parser = new m3u8.Parser()
+    if (parameters.entireVOD) {
+        await axios.get(playlist).then(async (data) => {
+            await parser.push(data.data)
+            await parser.end()
+        })
+        parameters.segments = parser.manifest.segments.length
+    }
     let startTime = Date.now()
     let prevTime = Date.now()
     proc.stderr.on("data", (data) => {
-        if ((data.toString()).match(currRegex) !== null) {
+        if ((data.toString()).match(/Opening\s'https?:\/\/[^\s]+' for reading/g) !== null) {
             ffmpegEvents.emit("increase", {
-                uuid: uuid,
-                progress: parseInt((data.toString()).match(currRegex)[0].split("/").pop().split(".ts")[0]) + 1,
-                total: parser.manifest.segments.length,
+                uuid: parameters.uuid,
+                progress: (parseInt((data.toString()).match(/Opening\s'https?:\/\/[^\s]+' for reading/g)[0].split("/").pop().split(".ts")[0]) + 1) - ((!parameters.entireVOD) ? parameters.startSegment : 0),
+                total: parameters.segments,
                 prevTime: prevTime,
                 currentTime: Date.now(),
                 startTime: startTime
@@ -122,7 +186,7 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
             prevTime = Date.now()
         } else if ((data.toString()).match(/.*frame=\s{0,}\d{1,}\sfps=.*/g)) {
             ffmpegEvents.emit("details", {
-                uuid: uuid,
+                uuid: parameters.uuid,
                 details: data.toString()
             })
         }
@@ -133,12 +197,12 @@ const ffmpegProgressHandler = async (proc, playlist, uuid) => {
 }
 
 const spawnFFmpeg = (source, savePath, parameters) => {
-    let ffmpegOptions = ["-i", source]
-    if (!parameters.entireVOD) {ffmpegOptions.push("-ss", parameters.startTime, "-to", parameters.endTime)}
+    let ffmpegOptions = ["-protocol_whitelist", "file,http,https,tcp,tls", "-i", source]
+    if (!parameters.entireVOD) { ffmpegOptions.push("-ss", parameters.startTime, "-to", parameters.endTime) }
     ffmpegOptions.push("-c", "copy", `${(electron.currentPlatform === "win") ? savePath : savePath + ".mp4"}`)
     let process = child_process.execFile(ffmpegPath, ffmpegOptions)
     ffmpegCloseHandler(process, savePath)
-    ffmpegProgressHandler(process, source, parameters.uuid)
+    ffmpegProgressHandler(process, source, parameters)
     activeProcesses.push({
         uuid: parameters.uuid,
         source: source,
@@ -203,7 +267,11 @@ nextApp.prepare().then(() => {
             })
         }
         if (!cancel) {
-            spawnFFmpeg(source, savePath, parameters)
+            if (parameters.entireVOD) {
+                spawnFFmpeg(source, savePath, parameters)
+            } else {
+                createM3U8Playlist(source, savePath, parameters)
+            }
         }
         res.json({
             cancel: cancel,
