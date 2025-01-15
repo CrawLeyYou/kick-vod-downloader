@@ -51,6 +51,9 @@ export default function Home() {
   const [selectedUUID, setSelectedUUID] = React.useState("")
   const [detailsOpenState, setDetailsOpenState] = React.useState(false)
   const selectedDetails = React.useRef("")
+  const [remainingData, setRemainingData] = React.useState("")
+  const [prevTime, setPrevTime] = React.useState(Date.now())
+  const [remaining, setRemaining] = React.useState("")
   const [details, setDetails] = React.useState({})
   const [segments, setSegments] = React.useState("")
   const [entireVOD, setEntireVOD] = React.useState(true)
@@ -62,6 +65,11 @@ export default function Home() {
       setDetails(JSONData)
     }
   })
+
+  React.useEffect(() => {
+    setRemaining(((((new Date(Date.now()) - new Date(prevTime)) / 1000) * remainingData) / 60).toFixed(1) + " minutes.")
+    setPrevTime(Date.now())
+  }, [remainingData])
 
   React.useEffect(() => {
     socket.on("increase", (data) => {
@@ -80,6 +88,7 @@ export default function Home() {
       }
       if (JSONData.uuid === selectedDetails.current) {
         setSegments(JSONData.segment)
+        setRemainingData(JSONData.remainingData)
       }
     })
   })
@@ -160,9 +169,36 @@ export default function Home() {
     })
   }
 
-  const downloadVOD = async () => {
+  const isEndGreater = async (startTime, endTime) => {
+    var startTimeAsSeconds = 0
+    var endTimeAsSeconds = 0
 
-    if (entireVOD && selectedRes !== "" || selectedRes !== "" && document.getElementById("startTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null && document.getElementById("endTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null) {
+    startTime.split(":").map((data, index) => {
+      startTimeAsSeconds += parseInt(data) * Math.pow(60, (2 - index))
+    })
+    endTime.split(":").map((data, index) => {
+      endTimeAsSeconds += parseInt(data) * Math.pow(60, (2 - index))
+    })
+
+    if (startTimeAsSeconds > endTimeAsSeconds) {
+      return false
+    }
+    else {
+      return true
+    }
+  }
+
+  const downloadVOD = async () => {
+    var validateTime = await isEndGreater(document.getElementById("startTime").value, document.getElementById("endTime").value)
+    var isStartTimeValid = document.getElementById("startTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null ?? entireVOD
+    var isEndTimeValid = document.getElementById("endTime").value.match(/^(\d{2,}):([0-5][0-9]):([0-5][0-9])$/) !== null ?? entireVOD
+
+      (!validateTime) ? () => {
+        isStartTimeValid = false
+        isEndTimeValid = false
+      } : ""
+
+    if (entireVOD && selectedRes !== "" && validateTime || selectedRes !== "" && isStartTimeValid && isEndTimeValid && validateTime) {
       axios.post("/api/download", {
         source: selectedVOD,
         uuid: selectedUUID,
@@ -183,8 +219,9 @@ export default function Home() {
         }
       })
     } else {
-      toast("Invalid time format", {
-        description: "Please enter a valid time format. i.e: 00:00:00",
+      cancelResDialog()
+      toast(`${((!isEndTimeValid || !isStartTimeValid) && selectedRes === "") ? "Invalid time/pattern & Resolution" : ((isEndTimeValid || isStartTimeValid) && selectedRes === "") ? "No Resolution" : "Invalid time/pattern"}`, {
+        description: `${((!isEndTimeValid || !isStartTimeValid) && selectedRes === "") ? "Please select a resolution and make sure enter a valid time/pattern. i.e: 00:00:00" : (selectedRes === "" && (isEndTimeValid || isStartTimeValid)) ? "Please select a resolution" : "Please enter a valid time/pattern. i.e: 00:00:00"}`,
         action: {
           label: "Close",
           onClick: () => { },
@@ -210,6 +247,7 @@ export default function Home() {
   }
 
   const cancelResDialog = async () => {
+    setSelectedRes("")
     setResOpenState(false)
     setEntireVOD(true)
   }
@@ -234,6 +272,9 @@ export default function Home() {
     selectedDetails.current = (event.target.getAttribute("data-uuid"))
     setDetailsOpenState(true)
     setDetails({})
+    setPrevTime(Date.now())
+    setRemainingData("")
+    setRemaining("")
     setSegments("")
   }
 
@@ -327,6 +368,7 @@ export default function Home() {
             <AlertDialogDescription>Video Bitrate: {details.bitrate}</AlertDialogDescription>
             <AlertDialogDescription>Downloaded Total Time: {details.downloadedTotalTime}</AlertDialogDescription>
             <AlertDialogDescription>Segments: {segments}</AlertDialogDescription>
+            <AlertDialogDescription>Remaining: {remaining}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelDetailsDialog}>Close</AlertDialogCancel>

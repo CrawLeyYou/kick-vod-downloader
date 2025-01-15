@@ -40,7 +40,7 @@ ffmpegEvents.on("increase", (data) => {
         uuid: data.uuid,
         progress: ((data.progress / data.total) * 100).toFixed(2),
         segment: `${data.progress} / ${data.total}`,
-        // remaining: `${((((new Date(data.currentTime) - new Date(data.prevTime)) / 1000) * (data.total - data.progress)) / 60).toFixed(1)}`, current remaining function somehow overflows the frontend, so commented out (will rewrite this on frontend)
+        remainingData: (data.total - data.progress)
     }
     io.emit("increase", JSON.stringify(betterData))
 })
@@ -177,19 +177,13 @@ const ffmpegProgressHandler = async (proc, playlist, parameters) => {
         })
         parameters.segments = parser.manifest.segments.length
     }
-    let startTime = Date.now()
-    let prevTime = Date.now()
     proc.stderr.on("data", (data) => {
         if ((data.toString()).match(/Opening\s'https?:\/\/[^\s]+' for reading/g) !== null) {
             ffmpegEvents.emit("increase", {
                 uuid: parameters.uuid,
                 progress: (parseInt((data.toString()).match(/Opening\s'https?:\/\/[^\s]+' for reading/g)[0].split("/").pop().split(".ts")[0]) + 1) - ((!parameters.entireVOD) ? parameters.startSegment : 0),
                 total: parameters.segments,
-                prevTime: prevTime,
-                currentTime: Date.now(),
-                startTime: startTime
             })
-            prevTime = Date.now()
         } else if ((data.toString()).match(/.*frame=\s{0,}\d{1,}\sfps=.*/g)) {
             ffmpegEvents.emit("details", {
                 uuid: parameters.uuid,
