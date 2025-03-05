@@ -125,13 +125,13 @@ export default function Home() {
 
   const fetchVODs = async () => {
     try {
-      if (inputData.match(/^https:\/\/kick.com\/video\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
-        let res = await axios.get(`${kickAPI}video/${inputData.split("https://kick.com/video/")[1]}`)
+      if (inputData.match(/^https:\/\/kick.com\/[a-zA-z0-9]{4,25}\/videos\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
+        let res = await axios.get(`${kickAPI}video/${inputData.split("videos/")[1]}`)
         setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png" }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
       }
       else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null) {
         let res = await axios.get(`${kickAPI}channels/${inputData}`)
-        setVODs(res.data.previous_livestreams)
+        setVODs(res.data.previousLivestreams)
       }
       else {
         toast("Invalid input", {
