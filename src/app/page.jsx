@@ -131,7 +131,7 @@ export default function Home() {
       }
       else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null) {
         let res = await axios.get(`${kickAPI}channels/${inputData}`)
-        setVODs(res.data.previousLivestreams)
+        setVODs(res.data.previous_livestreams)
       }
       else {
         toast("Invalid input", {
