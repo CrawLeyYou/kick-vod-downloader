@@ -3,6 +3,8 @@
 </p>
 <h1 align="center"> Kick VOD Downloader </h1>
 
+[Support Server](https://discord.gg/5trvjuqgm8)
+
 # Requirements 
 - Windows 10+ / Linux / MacOS (preferably Apple Silicon)
 - [FFmpeg](https://www.ffmpeg.org/download.html)
