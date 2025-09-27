@@ -4,13 +4,14 @@ import path from "node:path"
 import electron from "./lib/electron.js"
 import child_process from "node:child_process"
 import m3u8 from "m3u8-parser"
-import axios from "axios"
+import ax from "axios"
 import {
     EventEmitter
 } from "node:events"
 import { createServer } from "node:http"
 import { Server } from "socket.io"
 import fs from "node:fs"
+import packageDetails from "../package.json" assert {type: "json"}
 
 const devMode = (process.argv[2] === "dev") ? true : false
 const nextApp = next({
@@ -23,6 +24,9 @@ const ffmpegEvents = new EventEmitter()
 const app = express()
 const httpServer = createServer(app)
 const io = new Server(httpServer)
+const axios = ax.create({
+    headers: {"User-Agent": `${packageDetails.name}/${packageDetails.version}`}
+})
 
 let ffmpegPath
 let activeProcesses = []
@@ -199,6 +203,7 @@ const ffmpegProgressHandler = async (proc, playlist, parameters) => {
 const spawnFFmpeg = (source, savePath, parameters) => {
     let ffmpegOptions = ["-protocol_whitelist", "file,http,https,tcp,tls", "-i", source]
     if (!parameters.entireVOD) { ffmpegOptions.push("-ss", parameters.startTime, "-to", parameters.endTime) }
+    else ffmpegOptions.push("-headers", `"User-Agent: ${packageDetails.name}/${packageDetails.version}"`)
     ffmpegOptions.push("-c", "copy", `${(electron.currentPlatform === "win" || electron.currentPlatform === "darwin") ? savePath : savePath + ".mp4"}`)
     let process = child_process.execFile(ffmpegPath, ffmpegOptions)
     ffmpegCloseHandler(process, savePath)

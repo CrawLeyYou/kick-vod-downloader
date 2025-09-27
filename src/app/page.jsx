@@ -1,7 +1,7 @@
 'use client'
 
 import React from "react"
-import axios from "axios"
+import ax from "axios"
 import Image from "next/image"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 import socketIO from 'socket.io-client'
@@ -41,6 +41,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 const socket = socketIO.connect('ws://localhost:3000')
 
 export default function Home() {
+  const axios = ax.create({
+    headers: {"User-Agent": "kick-vod-downloader/1.1.1-hotfix-3"}
+  })
   const kickAPI = "https://kick.com/api/v1/"
   const [inputData, setInputData] = React.useState("")
   const [vods, setVODs] = React.useState([])
@@ -127,7 +130,7 @@ export default function Home() {
     try {
       if (inputData.match(/^https:\/\/kick.com\/[a-zA-z0-9]{4,25}\/videos\/[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/) !== null) {
         let res = await axios.get(`${kickAPI}video/${inputData.split("videos/")[1]}`)
-        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png" }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.created_at, video: { uuid: res.data.uuid } }])
+        setVODs([{ duration: res.data.livestream.duration, thumbnail: { src: (res.data.livestream.thumbnail !== null) ? res.data.livestream.thumbnail : "/thumbnail-err.png" }, session_title: res.data.livestream.session_title, start_time: res.data.livestream.start_time, video: { uuid: res.data.uuid } }])
       }
       else if (inputData.match(/^[a-zA-Z0-9]{4,25}$/) !== null) {
         let res = await axios.get(`${kickAPI}channels/${inputData}`)
