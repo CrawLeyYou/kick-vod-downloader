@@ -11,7 +11,7 @@ import {
 import { createServer } from "node:http"
 import { Server } from "socket.io"
 import fs from "node:fs"
-import packageDetails from "../package.json" assert {type: "json"}
+import packageDetails from "../package.json" with { type: "json" }
 
 const devMode = (process.argv[2] === "dev") ? true : false
 const nextApp = next({
